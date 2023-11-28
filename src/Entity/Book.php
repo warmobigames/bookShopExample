@@ -4,13 +4,18 @@ namespace App\Entity;
 
 use ApiPlatform\Metadata\ApiResource;
 use App\Repository\BookRepository;
+use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
 use Gedmo\Mapping\Annotation\Timestampable;
+use Symfony\Component\Serializer\Annotation\Groups;
 use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: BookRepository::class)]
-#[ApiResource]
+#[ApiResource(
+    normalizationContext: ['groups' => ['book:read']],
+    denormalizationContext: ['groups' => ['book:write']]
+)]
 class Book
 {
     const BOOK_STATUS_DRAFT = 'DRAFT';
@@ -34,26 +39,57 @@ class Book
     #[ORM\Id]
     #[ORM\GeneratedValue]
     #[ORM\Column]
+    #[Groups([
+        'book:read'
+    ])]
     private ?int $id = null;
 
+    #[Groups([
+        'book:read',
+        'book:write'
+    ])]
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
+    #[Groups([
+        'book:read',
+        'book:write'
+    ])]
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
 
+    #[Groups([
+        'book:read',
+        'book:write'
+    ])]
     #[Assert\Choice(choices: self::BOOK_STATUSES)]
     #[ORM\Column]
     private ?string $status = null;
 
+    #[Groups([
+        'book:read',
+        'book:write'
+    ])]
     #[Assert\Choice(choices: self::BOOK_AGE_RESTRICTIONS)]
     #[ORM\Column(type: Types::INTEGER)]
     private ?int $ageRestriction = null;
 
+    #[Groups([
+        'book:read'
+    ])]
+    #[ORM\OneToMany(mappedBy: 'book', targetEntity: Chapter::class)]
+    private ?Collection $chapters;
+
+    #[Groups([
+        'book:read'
+    ])]
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'create')]
     private ?\DatetimeInterface $createdAt;
 
+    #[Groups([
+        'book:read'
+    ])]
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'update')]
     private ?\DatetimeInterface $updatedAt;
@@ -138,5 +174,34 @@ class Book
     public function getUpdatedAt(): ?\DatetimeInterface
     {
         return $this->updatedAt;
+    }
+
+    /**
+     * @return Collection|null
+     */
+    public function getChapters(): ?Collection
+    {
+        return $this->chapters;
+    }
+
+    public function addChapter(Chapter $chapter): static
+    {
+        if (!$this->chapters->contains($chapter)) {
+            $this->chapters->add($chapter);
+            $chapter->setBook($this);
+        }
+
+        return $this;
+    }
+
+    public function removeChapter(Chapter $chapter): static
+    {
+        if ($this->chapters->removeElement($chapter)) {
+            if ($chapter->getBook() == $this) {
+                $chapter->setBook(null);
+            }
+        }
+
+        return $this;
     }
 }
