@@ -29,6 +29,7 @@ class Chapter
     private ?int $id = null;
 
     #[ORM\ManyToOne]
+    #[ORM\JoinColumn(nullable: false)]
     private ?Book $book;
 
     #[Groups([
@@ -53,13 +54,13 @@ class Chapter
     #[Groups([
         'book:read'
     ])]
-    #[ORM\Column(type: Types::TEXT)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $commentBefore = null;
 
     #[Groups([
         'book:read'
     ])]
-    #[ORM\Column(type: Types::TEXT)]
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $commentAfter = null;
 
     #[Groups([
