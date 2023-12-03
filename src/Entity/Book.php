@@ -2,8 +2,16 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
+use ApiPlatform\Metadata\Put;
 use App\Repository\BookRepository;
+use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -15,6 +23,18 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[ApiResource(
     normalizationContext: ['groups' => ['book:read']],
     denormalizationContext: ['groups' => ['book:write']]
+)]
+#[Get]
+#[GetCollection(normalizationContext: ['groups' => ['book:readAll']])]
+#[Patch(security: 'object.getUser() === user')]
+#[Put]
+#[Post(security: 'is_granted("ROLE_USER")')]
+
+#[ApiFilter(
+    SearchFilter::class,
+    properties: [
+        'user' => 'exact'
+    ]
 )]
 class Book
 {
@@ -40,27 +60,37 @@ class Book
     #[ORM\GeneratedValue]
     #[ORM\Column]
     #[Groups([
-        'book:read'
+        'book:read',
+        'book:readAll',
     ])]
     private ?int $id = null;
 
     #[Groups([
         'book:read',
-        'book:write'
+    ])]
+    #[ORM\ManyToOne]
+    private ?User $user = null;
+
+    #[Groups([
+        'book:read',
+        'book:write',
+        'book:readAll',
     ])]
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
     #[Groups([
         'book:read',
-        'book:write'
+        'book:write',
+        'book:readAll',
     ])]
     #[ORM\Column(type: Types::TEXT)]
     private ?string $description = null;
 
     #[Groups([
         'book:read',
-        'book:write'
+        'book:write',
+        'book:readAll',
     ])]
     #[Assert\Choice(choices: self::BOOK_STATUSES)]
     #[ORM\Column]
@@ -68,32 +98,34 @@ class Book
 
     #[Groups([
         'book:read',
-        'book:write'
+        'book:write',
+        'book:readAll',
     ])]
     #[Assert\Choice(choices: self::BOOK_AGE_RESTRICTIONS)]
     #[ORM\Column(type: Types::INTEGER)]
     private ?int $ageRestriction = null;
 
     #[Groups([
-        'book:read'
+        'book:read',
     ])]
     #[ORM\OneToMany(mappedBy: 'book', targetEntity: Chapter::class)]
     private ?Collection $chapters;
 
     #[Groups([
-        'book:read'
+        'book:read',
+        'book:readAll',
     ])]
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'create')]
     private ?\DatetimeInterface $createdAt;
 
     #[Groups([
-        'book:read'
+        'book:read',
+        'book:readAll',
     ])]
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'update')]
     private ?\DatetimeInterface $updatedAt;
-
 
     public function getId(): ?int
     {
@@ -208,5 +240,21 @@ class Book
     public function __toString(): string
     {
         return $this->getTitle();
+    }
+
+    /**
+     * @return User|null
+     */
+    public function getUser(): ?User
+    {
+        return $this->user;
+    }
+
+    /**
+     * @param User|null $user
+     */
+    public function setUser(?User $user): void
+    {
+        $this->user = $user;
     }
 }

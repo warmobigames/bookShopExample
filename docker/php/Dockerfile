@@ -36,3 +36,5 @@ RUN apt-get install -y \
 
 
 RUN docker-php-ext-configure intl && docker-php-ext-install intl
+
+RUN apt-get install -y acl

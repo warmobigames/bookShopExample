@@ -2,7 +2,13 @@
 
 namespace App\Entity;
 
+use ApiPlatform\Doctrine\Orm\Filter\SearchFilter;
+use ApiPlatform\Metadata\ApiFilter;
 use ApiPlatform\Metadata\ApiResource;
+use ApiPlatform\Metadata\Get;
+use ApiPlatform\Metadata\GetCollection;
+use ApiPlatform\Metadata\Patch;
+use ApiPlatform\Metadata\Post;
 use App\Repository\ChapterRepository;
 use Doctrine\DBAL\Types\Types;
 use Doctrine\ORM\Mapping as ORM;
@@ -12,6 +18,19 @@ use Symfony\Component\Validator\Constraints as Assert;
 
 #[ORM\Entity(repositoryClass: ChapterRepository::class)]
 #[ApiResource]
+#[Get(security: 'is_granted("CHAPTER_VIEW", object)')]
+#[GetCollection(
+    normalizationContext: ['groups' => ['chapter:readAll']]
+)]
+#[Post(securityPostDenormalize: 'is_granted("CHAPTER_CREATE", object)')]
+#[Patch(security: 'user === object.getBook().getUser()')]
+
+#[ApiFilter(
+    SearchFilter::class,
+    properties: [
+        'book' => 'exact'
+    ]
+)]
 class Chapter
 {
     const CHAPTER_STATUS_DRAFT = 'DRAFT';
@@ -21,7 +40,8 @@ class Chapter
         self::CHAPTER_STATUS_PUBLISHED,
     ];
     #[Groups([
-        'book:read'
+        'book:read',
+        'chapter:readAll',
     ])]
     #[ORM\Id]
     #[ORM\GeneratedValue]
@@ -33,49 +53,61 @@ class Chapter
     private ?Book $book;
 
     #[Groups([
-        'book:read'
+        'book:read',
+        'chapter:readAll',
     ])]
     #[ORM\Column(length: 255)]
     private ?string $title = null;
 
     #[Groups([
-        'book:read'
+        'book:read',
+        'chapter:readAll',
     ])]
     #[Assert\Choice(choices: self::CHAPTER_STATUSES)]
     #[ORM\Column(length: 255)]
     private ?string $status = null;
 
     #[Groups([
-        'book:read'
+        'chapter:read'
     ])]
     #[ORM\Column(type: Types::TEXT)]
     private ?string $text = null;
 
     #[Groups([
-        'book:read'
+        'chapter:read'
     ])]
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $commentBefore = null;
 
     #[Groups([
-        'book:read'
+        'chapter:read'
     ])]
     #[ORM\Column(type: Types::TEXT, nullable: true)]
     private ?string $commentAfter = null;
 
     #[Groups([
-        'book:read'
+        'book:read',
+        'chapter:readAll',
     ])]
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'create')]
     private ?\DatetimeInterface $createdAt;
 
     #[Groups([
-        'book:read'
+        'book:read',
+        'chapter:readAll',
     ])]
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'update')]
     private ?\DatetimeInterface $updatedAt;
+
+
+    #[Groups([
+        'book:read',
+        'chapter:readAll',
+    ])]
+    #[ORM\Column(type: Types::BOOLEAN, options: ['default' => false])]
+    private ?bool $purchaseRequired = null;
 
     public function getId(): ?int
     {
@@ -172,5 +204,21 @@ class Chapter
     public function getUpdatedAt(): ?\DatetimeInterface
     {
         return $this->updatedAt;
+    }
+
+    /**
+     * @return bool|null
+     */
+    public function getPurchaseRequired(): ?bool
+    {
+        return $this->purchaseRequired;
+    }
+
+    /**
+     * @param bool|null $purchaseRequired
+     */
+    public function setPurchaseRequired(?bool $purchaseRequired): void
+    {
+        $this->purchaseRequired = $purchaseRequired;
     }
 }
