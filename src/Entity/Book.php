@@ -11,6 +11,7 @@ use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
 use App\Controller\Action\GetBookAction;
+use App\Filter\BookByGenreFilter;
 use App\Repository\BookRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -29,7 +30,7 @@ use Symfony\Component\Validator\Constraints as Assert;
 #[GetCollection(
     normalizationContext: ['groups' => ['book:readAll']]
 )]
-#[Patch(security: 'object.getUser() === user')]
+#[Patch(security: 'object.getUser() === user or is_granted("ROLE_ADMIN")')]
 #[Put]
 #[Post(security: 'is_granted("ROLE_USER")')]
 
@@ -129,6 +130,20 @@ class Book
     #[ORM\Column(type: Types::DATETIME_MUTABLE)]
     #[Timestampable(on: 'update')]
     private ?\DatetimeInterface $updatedAt;
+
+    #[Groups([
+        'book:read',
+        'book:readAll',
+        'book:write',
+    ])]
+    #[ApiFilter(BookByGenreFilter::class)]
+    #[ORM\ManyToMany(targetEntity: Genre::class, mappedBy: 'books')]
+    private Collection $genres;
+
+    public function __construct()
+    {
+        $this->genres = new ArrayCollection();
+    }
 
     public function getId(): ?int
     {
@@ -259,5 +274,32 @@ class Book
     public function setUser(?User $user): void
     {
         $this->user = $user;
+    }
+
+    /**
+     * @return Collection<int, Genre>
+     */
+    public function getGenres(): Collection
+    {
+        return $this->genres;
+    }
+
+    public function addGenre(Genre $genre): static
+    {
+        if (!$this->genres->contains($genre)) {
+            $this->genres->add($genre);
+            $genre->addBook($this);
+        }
+
+        return $this;
+    }
+
+    public function removeGenre(Genre $genre): static
+    {
+        if ($this->genres->removeElement($genre)) {
+            $genre->removeBook($this);
+        }
+
+        return $this;
     }
 }
