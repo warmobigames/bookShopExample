@@ -10,6 +10,7 @@ use ApiPlatform\Metadata\GetCollection;
 use ApiPlatform\Metadata\Patch;
 use ApiPlatform\Metadata\Post;
 use ApiPlatform\Metadata\Put;
+use App\Controller\Action\GetBookAction;
 use App\Repository\BookRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -24,8 +25,10 @@ use Symfony\Component\Validator\Constraints as Assert;
     normalizationContext: ['groups' => ['book:read']],
     denormalizationContext: ['groups' => ['book:write']]
 )]
-#[Get]
-#[GetCollection(normalizationContext: ['groups' => ['book:readAll']])]
+#[Get(controller: GetBookAction::class)]
+#[GetCollection(
+    normalizationContext: ['groups' => ['book:readAll']]
+)]
 #[Patch(security: 'object.getUser() === user')]
 #[Put]
 #[Post(security: 'is_granted("ROLE_USER")')]
